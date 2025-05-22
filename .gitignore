@@ -1,0 +1,4 @@
+.vscode/c_cpp_properties.json
+**/libraries
+**/preproc
+**/core

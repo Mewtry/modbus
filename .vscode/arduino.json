@@ -1,0 +1,7 @@
+{
+    "configuration": "cpu=atmega328old",
+    "board": "arduino:avr:nano",
+    "sketch": "modbus\\modbus.ino",
+    "port": "COM6",
+    "output": "build_arduino"
+}
