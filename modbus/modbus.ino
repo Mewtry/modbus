@@ -4,7 +4,7 @@
 
 
 #define NUMCOILS 6
-uint8_t coils[NUMCOILS] = {8, 9, 10, 11, 12, 13};
+uint8_t coils[NUMCOILS] = {13, 12, 11, 10, 9, 8};
 
 #define NUM_REGISTERS 10
 uint16_t holdingRegisters[NUM_REGISTERS] = {100, 200, 300, 400, 500, 600, 700, 800, 900, 1000};
@@ -12,10 +12,12 @@ uint16_t holdingRegisters[NUM_REGISTERS] = {100, 200, 300, 400, 500, 600, 700, 8
 void setup() {
   pinMode(TX_ENABLE_PIN, OUTPUT);
   digitalWrite(TX_ENABLE_PIN, LOW);
-  for (int i = 0; i < NUMCOILS; i++) {
-    pinMode(coils[i], OUTPUT);
-    digitalWrite(coils[i], LOW); // Inicializa bobinas como desligadas
-  }
+  // for (int i = 0; i < NUMCOILS; i++) {
+  //   pinMode(coils[i], OUTPUT);
+  //   digitalWrite(coils[i], LOW); // Inicializa bobinas como desligadas
+  // }
+  DDRB = 0b00111111; // Pinos de D8 a D13 como saída (PB0 a PB5)
+  PORTB = 0b00100000; // LED D13 Ligado
   Serial.begin(BAUD_RATE);
   // Serial.println("Initialized");
 }
@@ -53,7 +55,7 @@ void loop() {
     // Serial.println("Slave ID OK");
     if (!verifyCRC(request, index - 2, request[index - 2], request[index - 1])) return;
     // Serial.println("CRC OK");
-    uint8_t response[256];
+    uint8_t response[256] = {0};
     uint8_t responseLength = 0;
 
     switch (request[1]) {
@@ -82,24 +84,28 @@ void loop() {
 bool handleReadCoils(uint8_t* request, uint8_t* response, uint8_t* responseLength) {
   uint16_t startAddr = (request[2] << 8) | request[3];
   uint16_t numCoils  = (request[4] << 8) | request[5];
-  if(startAddr + numCoils > NUM_REGISTERS) return false;
+  if(0x0001 > numCoils || numCoils > 0x07D0) return false; // Número de bobinas inválido | CodeError 0x03
+  if(startAddr + numCoils > NUM_REGISTERS) return false;   // Leitura de coils inválida  | CodeError 0x02
 
   response[0] = SLAVE_ID;
   response[1] = 0x01; // Função de leitura de bobinas
   response[2] = numCoils / 8 + (numCoils % 8 ? 1 : 0); // Número de bytes a serem enviados
 
-  uint8_t val[response[2]];
-
+  uint8_t val = 0;
+  PORTB = 0x00;
   for(int i = 0; i < numCoils; i++) {
-    val[i] = digitalRead(coils[startAddr + i]);
-    response[3 + 2 * i] = val[i] >> 8;
-    response[4 + 2 * i] = val[i] & 0xFF;
+    val = digitalRead(coils[(startAddr - 1) + i]);
+    Serial.print("Pino ");
+    Serial.print(coils[(startAddr - 1) + i]);
+    Serial.print(": ");
+    Serial.println(val);
+    response [3 + i / 8] |= (val << (i % 8));
   }
 
-  uint16_t crc = calculateCRC(response, 3 + 2 * numCoils);
-  response[3 + 2 * numCoils] = crc & 0xFF;
-  response[4 + 2 * numCoils] = crc >> 8;
-  *responseLength = 5 + 2 * numCoils;
+  uint16_t crc = calculateCRC(response, 3 + response[2]);
+  response[3 + response[2]] = crc & 0xFF;
+  response[4 + response[2]] = crc >> 8;
+  *responseLength = 5 + response[2];
   return true;
 }
 

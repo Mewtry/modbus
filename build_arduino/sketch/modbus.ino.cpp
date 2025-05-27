@@ -6,39 +6,41 @@
 
 
 #define NUMCOILS 6
-uint8_t coils[NUMCOILS] = {8, 9, 10, 11, 12, 13};
+uint8_t coils[NUMCOILS] = {13, 12, 11, 10, 9, 8};
 
 #define NUM_REGISTERS 10
 uint16_t holdingRegisters[NUM_REGISTERS] = {100, 200, 300, 400, 500, 600, 700, 800, 900, 1000};
 
 #line 12 "C:\\workspace\\IFSC\\RIS\\modbus\\modbus\\modbus.ino"
 void setup();
-#line 23 "C:\\workspace\\IFSC\\RIS\\modbus\\modbus\\modbus.ino"
+#line 25 "C:\\workspace\\IFSC\\RIS\\modbus\\modbus\\modbus.ino"
 void loop();
-#line 82 "C:\\workspace\\IFSC\\RIS\\modbus\\modbus\\modbus.ino"
+#line 84 "C:\\workspace\\IFSC\\RIS\\modbus\\modbus\\modbus.ino"
 bool handleReadCoils(uint8_t* request, uint8_t* response, uint8_t* responseLength);
-#line 106 "C:\\workspace\\IFSC\\RIS\\modbus\\modbus\\modbus.ino"
+#line 112 "C:\\workspace\\IFSC\\RIS\\modbus\\modbus\\modbus.ino"
 bool handleModbusFunctionException(uint8_t functionCode, uint8_t* response, uint8_t* responseLength);
-#line 119 "C:\\workspace\\IFSC\\RIS\\modbus\\modbus\\modbus.ino"
+#line 125 "C:\\workspace\\IFSC\\RIS\\modbus\\modbus\\modbus.ino"
 bool handleReadHoldingRegisters(uint8_t* request, uint8_t* response, uint8_t* responseLength);
-#line 142 "C:\\workspace\\IFSC\\RIS\\modbus\\modbus\\modbus.ino"
+#line 148 "C:\\workspace\\IFSC\\RIS\\modbus\\modbus\\modbus.ino"
 bool handleWriteSingleCoil(uint8_t* request, uint8_t* response, uint8_t* responseLength);
-#line 179 "C:\\workspace\\IFSC\\RIS\\modbus\\modbus\\modbus.ino"
+#line 185 "C:\\workspace\\IFSC\\RIS\\modbus\\modbus\\modbus.ino"
 bool handleWriteSingleRegister(uint8_t* request, uint8_t* response, uint8_t* responseLength);
-#line 197 "C:\\workspace\\IFSC\\RIS\\modbus\\modbus\\modbus.ino"
+#line 203 "C:\\workspace\\IFSC\\RIS\\modbus\\modbus\\modbus.ino"
 uint16_t calculateCRC(uint8_t *data, uint8_t length);
-#line 212 "C:\\workspace\\IFSC\\RIS\\modbus\\modbus\\modbus.ino"
+#line 218 "C:\\workspace\\IFSC\\RIS\\modbus\\modbus\\modbus.ino"
 bool verifyCRC(uint8_t* data, uint8_t len, uint8_t crcMSB, uint8_t crcLSB);
-#line 223 "C:\\workspace\\IFSC\\RIS\\modbus\\modbus\\modbus.ino"
+#line 229 "C:\\workspace\\IFSC\\RIS\\modbus\\modbus\\modbus.ino"
 void sendModbusResponse(uint8_t* data, uint8_t len);
 #line 12 "C:\\workspace\\IFSC\\RIS\\modbus\\modbus\\modbus.ino"
 void setup() {
   pinMode(TX_ENABLE_PIN, OUTPUT);
   digitalWrite(TX_ENABLE_PIN, LOW);
-  for (int i = 0; i < NUMCOILS; i++) {
-    pinMode(coils[i], OUTPUT);
-    digitalWrite(coils[i], LOW); // Inicializa bobinas como desligadas
-  }
+  // for (int i = 0; i < NUMCOILS; i++) {
+  //   pinMode(coils[i], OUTPUT);
+  //   digitalWrite(coils[i], LOW); // Inicializa bobinas como desligadas
+  // }
+  DDRB = 0b00111111; // Pinos de D8 a D13 como saída (PB0 a PB5)
+  PORTB = 0b00100000; // LED D13 Ligado
   Serial.begin(BAUD_RATE);
   // Serial.println("Initialized");
 }
@@ -105,24 +107,28 @@ void loop() {
 bool handleReadCoils(uint8_t* request, uint8_t* response, uint8_t* responseLength) {
   uint16_t startAddr = (request[2] << 8) | request[3];
   uint16_t numCoils  = (request[4] << 8) | request[5];
-  if(startAddr + numCoils > NUM_REGISTERS) return false;
+  if(0x0001 > numCoils || numCoils > 0x07D0) return false; // Número de bobinas inválido | CodeError 0x03
+  if(startAddr + numCoils > NUM_REGISTERS) return false;   // Leitura de coils inválida  | CodeError 0x02
 
   response[0] = SLAVE_ID;
   response[1] = 0x01; // Função de leitura de bobinas
   response[2] = numCoils / 8 + (numCoils % 8 ? 1 : 0); // Número de bytes a serem enviados
 
-  uint8_t val[response[2]];
-
+  uint8_t val = 0;
+  PORTB = 0x00;
   for(int i = 0; i < numCoils; i++) {
-    val[i] = digitalRead(coils[startAddr + i]);
-    response[3 + 2 * i] = val[i] >> 8;
-    response[4 + 2 * i] = val[i] & 0xFF;
+    val = digitalRead(coils[(startAddr - 1) + i]);
+    Serial.print("Pino ");
+    Serial.print(coils[(startAddr - 1) + i]);
+    Serial.print(": ");
+    Serial.println(val);
+    response [3 + i / 8] |= (val << (i % 8));
   }
 
-  uint16_t crc = calculateCRC(response, 3 + 2 * numCoils);
-  response[3 + 2 * numCoils] = crc & 0xFF;
-  response[4 + 2 * numCoils] = crc >> 8;
-  *responseLength = 5 + 2 * numCoils;
+  uint16_t crc = calculateCRC(response, 3 + response[2]);
+  response[3 + response[2]] = crc & 0xFF;
+  response[4 + response[2]] = crc >> 8;
+  *responseLength = 5 + response[2];
   return true;
 }
 
