@@ -1,5 +1,5 @@
-C:\workspace\IFSC\RIS\modbus\build_arduino\sketch\modbus.ino.cpp.o: \
- C:\workspace\IFSC\RIS\modbus\build_arduino\sketch\modbus.ino.cpp \
+C:\workspace\ifsc\modbus\build_arduino\sketch\modbus.ino.cpp.o: \
+ C:\workspace\ifsc\modbus\build_arduino\sketch\modbus.ino.cpp \
  C:\Users\theo-\AppData\Local\Arduino15\packages\arduino\hardware\avr\1.8.6\cores\arduino/Arduino.h \
  C:\Users\theo-\AppData\Local\Arduino15\packages\arduino\hardware\avr\1.8.6\cores\arduino/binary.h \
  C:\Users\theo-\AppData\Local\Arduino15\packages\arduino\hardware\avr\1.8.6\cores\arduino/WCharacter.h \

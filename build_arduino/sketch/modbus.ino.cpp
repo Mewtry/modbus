@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#line 1 "C:\\workspace\\IFSC\\RIS\\modbus\\modbus\\modbus.ino"
+#line 1 "C:\\workspace\\ifsc\\modbus\\modbus\\modbus.ino"
 #define SLAVE_ID 1
 #define TX_ENABLE_PIN 2
 #define BAUD_RATE 9600
@@ -11,27 +11,27 @@ uint8_t coils[NUMCOILS] = {13, 12, 11, 10, 9, 8};
 #define NUM_REGISTERS 10
 uint16_t holdingRegisters[NUM_REGISTERS] = {100, 200, 300, 400, 500, 600, 700, 800, 900, 1000};
 
-#line 12 "C:\\workspace\\IFSC\\RIS\\modbus\\modbus\\modbus.ino"
+#line 12 "C:\\workspace\\ifsc\\modbus\\modbus\\modbus.ino"
 void setup();
-#line 25 "C:\\workspace\\IFSC\\RIS\\modbus\\modbus\\modbus.ino"
+#line 25 "C:\\workspace\\ifsc\\modbus\\modbus\\modbus.ino"
 void loop();
-#line 84 "C:\\workspace\\IFSC\\RIS\\modbus\\modbus\\modbus.ino"
+#line 85 "C:\\workspace\\ifsc\\modbus\\modbus\\modbus.ino"
 bool handleReadCoils(uint8_t* request, uint8_t* response, uint8_t* responseLength);
-#line 112 "C:\\workspace\\IFSC\\RIS\\modbus\\modbus\\modbus.ino"
+#line 116 "C:\\workspace\\ifsc\\modbus\\modbus\\modbus.ino"
 bool handleModbusFunctionException(uint8_t functionCode, uint8_t* response, uint8_t* responseLength);
-#line 125 "C:\\workspace\\IFSC\\RIS\\modbus\\modbus\\modbus.ino"
+#line 129 "C:\\workspace\\ifsc\\modbus\\modbus\\modbus.ino"
 bool handleReadHoldingRegisters(uint8_t* request, uint8_t* response, uint8_t* responseLength);
-#line 148 "C:\\workspace\\IFSC\\RIS\\modbus\\modbus\\modbus.ino"
+#line 153 "C:\\workspace\\ifsc\\modbus\\modbus\\modbus.ino"
 bool handleWriteSingleCoil(uint8_t* request, uint8_t* response, uint8_t* responseLength);
-#line 185 "C:\\workspace\\IFSC\\RIS\\modbus\\modbus\\modbus.ino"
+#line 190 "C:\\workspace\\ifsc\\modbus\\modbus\\modbus.ino"
 bool handleWriteSingleRegister(uint8_t* request, uint8_t* response, uint8_t* responseLength);
-#line 203 "C:\\workspace\\IFSC\\RIS\\modbus\\modbus\\modbus.ino"
+#line 208 "C:\\workspace\\ifsc\\modbus\\modbus\\modbus.ino"
 uint16_t calculateCRC(uint8_t *data, uint8_t length);
-#line 218 "C:\\workspace\\IFSC\\RIS\\modbus\\modbus\\modbus.ino"
+#line 223 "C:\\workspace\\ifsc\\modbus\\modbus\\modbus.ino"
 bool verifyCRC(uint8_t* data, uint8_t len, uint8_t crcMSB, uint8_t crcLSB);
-#line 229 "C:\\workspace\\IFSC\\RIS\\modbus\\modbus\\modbus.ino"
+#line 234 "C:\\workspace\\ifsc\\modbus\\modbus\\modbus.ino"
 void sendModbusResponse(uint8_t* data, uint8_t len);
-#line 12 "C:\\workspace\\IFSC\\RIS\\modbus\\modbus\\modbus.ino"
+#line 12 "C:\\workspace\\ifsc\\modbus\\modbus\\modbus.ino"
 void setup() {
   pinMode(TX_ENABLE_PIN, OUTPUT);
   digitalWrite(TX_ENABLE_PIN, LOW);
@@ -78,7 +78,7 @@ void loop() {
     // Serial.println("Slave ID OK");
     if (!verifyCRC(request, index - 2, request[index - 2], request[index - 1])) return;
     // Serial.println("CRC OK");
-    uint8_t response[256];
+    uint8_t response[256] = {0};
     uint8_t responseLength = 0;
 
     switch (request[1]) {
@@ -103,8 +103,9 @@ void loop() {
   }
 }
 
-// Função 0x01 - Read Coils
-bool handleReadCoils(uint8_t* request, uint8_t* response, uint8_t* responseLength) {
+// Função 0x01 - Read Coils 
+// Exemplo de requisição: 01 01 00 01 00 05 C9 AD
+bool handleReadCoils(uint8_t* request, uint8_t* response, uint8_t* responseLength) { 
   uint16_t startAddr = (request[2] << 8) | request[3];
   uint16_t numCoils  = (request[4] << 8) | request[5];
   if(0x0001 > numCoils || numCoils > 0x07D0) return false; // Número de bobinas inválido | CodeError 0x03
@@ -115,7 +116,7 @@ bool handleReadCoils(uint8_t* request, uint8_t* response, uint8_t* responseLengt
   response[2] = numCoils / 8 + (numCoils % 8 ? 1 : 0); // Número de bytes a serem enviados
 
   uint8_t val = 0;
-  PORTB = 0x00;
+  PORTB = 0x00010101;
   for(int i = 0; i < numCoils; i++) {
     val = digitalRead(coils[(startAddr - 1) + i]);
     Serial.print("Pino ");
@@ -124,6 +125,9 @@ bool handleReadCoils(uint8_t* request, uint8_t* response, uint8_t* responseLengt
     Serial.println(val);
     response [3 + i / 8] |= (val << (i % 8));
   }
+
+  Serial.print("Response: ");
+  Serial.println(response[3], HEX);
 
   uint16_t crc = calculateCRC(response, 3 + response[2]);
   response[3 + response[2]] = crc & 0xFF;
@@ -168,6 +172,7 @@ bool handleReadHoldingRegisters(uint8_t* request, uint8_t* response, uint8_t* re
 }
 
 // Função 0x05 - Write Single Coil
+// Exemplo de requisição: 01 05 00 00 FF 00 3A 8C
 bool handleWriteSingleCoil(uint8_t* request, uint8_t* response, uint8_t* responseLength) {
   uint16_t coilAddr = (request[2] << 8) | request[3]; 
   uint16_t value    = (request[4] << 8) | request[5];

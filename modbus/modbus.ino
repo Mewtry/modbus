@@ -80,8 +80,9 @@ void loop() {
   }
 }
 
-// Função 0x01 - Read Coils
-bool handleReadCoils(uint8_t* request, uint8_t* response, uint8_t* responseLength) {
+// Função 0x01 - Read Coils 
+// Exemplo de requisição: 01 01 00 01 00 05 C9 AD
+bool handleReadCoils(uint8_t* request, uint8_t* response, uint8_t* responseLength) { 
   uint16_t startAddr = (request[2] << 8) | request[3];
   uint16_t numCoils  = (request[4] << 8) | request[5];
   if(0x0001 > numCoils || numCoils > 0x07D0) return false; // Número de bobinas inválido | CodeError 0x03
@@ -92,7 +93,7 @@ bool handleReadCoils(uint8_t* request, uint8_t* response, uint8_t* responseLengt
   response[2] = numCoils / 8 + (numCoils % 8 ? 1 : 0); // Número de bytes a serem enviados
 
   uint8_t val = 0;
-  PORTB = 0x00;
+  PORTB = 0x00010101;
   for(int i = 0; i < numCoils; i++) {
     val = digitalRead(coils[(startAddr - 1) + i]);
     Serial.print("Pino ");
@@ -101,6 +102,9 @@ bool handleReadCoils(uint8_t* request, uint8_t* response, uint8_t* responseLengt
     Serial.println(val);
     response [3 + i / 8] |= (val << (i % 8));
   }
+
+  Serial.print("Response: ");
+  Serial.println(response[3], HEX);
 
   uint16_t crc = calculateCRC(response, 3 + response[2]);
   response[3 + response[2]] = crc & 0xFF;
@@ -145,6 +149,7 @@ bool handleReadHoldingRegisters(uint8_t* request, uint8_t* response, uint8_t* re
 }
 
 // Função 0x05 - Write Single Coil
+// Exemplo de requisição: 01 05 00 00 FF 00 3A 8C
 bool handleWriteSingleCoil(uint8_t* request, uint8_t* response, uint8_t* responseLength) {
   uint16_t coilAddr = (request[2] << 8) | request[3]; 
   uint16_t value    = (request[4] << 8) | request[5];
