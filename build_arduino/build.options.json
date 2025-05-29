@@ -5,7 +5,7 @@
   "customBuildProperties": "",
   "fqbn": "arduino:avr:nano:cpu=atmega328",
   "hardwareFolders": "C:\\Users\\theo-\\AppData\\Local\\Arduino15\\packages",
-  "otherLibrariesFolders": "C:\\Users\\theo-\\Documents\\Arduino\\libraries",
+  "otherLibrariesFolders": "C:\\Users\\theo-\\OneDrive\\Documents\\Arduino\\libraries",
   "runtime.ide.version": "10607",
-  "sketchLocation": "C:\\workspace\\ifsc\\modbus\\modbus"
+  "sketchLocation": "C:\\workspace\\IFSC\\RIS\\modbus\\modbus"
 }
